@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Empilhar Excel</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 30px; }
+    textarea { width: 100%; height: 300px; margin-top: 20px; }
+    button { margin-top: 10px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Empilhador de Arquivos Excel (.xlsx)</h2>
+  <p>Selecione os arquivos Excel com a mesma estrutura para empilhar os dados (ignora o cabeçalho).</p>
+
+  <input type="file" id="fileInput" multiple accept=".xlsx" />
+  <button onclick="processFiles()">Processar</button>
+
+  <textarea id="output" placeholder="Resultado aparecerá aqui..."></textarea>
+  <br>
+  <button onclick="copiar()">Copiar</button>
+  <button onclick="baixar()">Baixar Resultado</button>
+
+  <script>
+    function processFiles() {
+      const input = document.getElementById('fileInput');
+      const output = document.getElementById('output');
+      let finalResult = [];
+
+      if (!input.files.length) {
+        alert("Por favor, selecione um ou mais arquivos Excel.");
+        return;
+      }
+
+      let filesProcessed = 0;
+
+      Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          // Remove cabeçalho e linhas vazias
+          const dataSemCabecalho = sheetData.slice(1);
+          dataSemCabecalho.forEach(row => {
+            if (row && row.join('').trim() !== '') {
+              finalResult.push(row.join(' ').trim());
+            }
+          });
+
+          filesProcessed++;
+          if (filesProcessed === input.files.length) {
+            output.value = finalResult.join('\n');  // exibe uma linha por registro
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function copiar() {
+      const output = document.getElementById('output');
+      output.select();
+      document.execCommand('copy');
+      alert("Resultado copiado!");
+    }
+
+    function baixar() {
+      const blob = new Blob([document.getElementById('output').value], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "resultado_empilhado.txt";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
